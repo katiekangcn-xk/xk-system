@@ -193,7 +193,7 @@
                     报价
                 </button>
 
-                <button @click="goToDieCutter" class="btn btn-secondary text-cyan-600 hover:bg-cyan-50">
+                <button @click="goToPage('die_cutter')" :class="['btn', currentPage === 'die_cutter' ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg' : 'text-cyan-600 hover:bg-gradient-to-r hover:from-cyan-50 hover:to-cyan-50']">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
                     拼版计算
                 </button>
@@ -2185,6 +2185,243 @@
                 </div>
             </div>
         </div>
+
+        <div v-if="loggedUser && currentPage === 'die_cutter'" class="space-y-6">
+            <div class="card border-2 border-cyan-200 bg-gradient-to-br from-cyan-50 to-white">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="section-title text-cyan-700">
+                        <span class="text-2xl mr-2">📦</span>
+                        选择盒型
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div v-for="(boxType, key) in boxTypes" :key="key" 
+                         :class="['p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg', selectedBoxType === key ? 'border-cyan-500 bg-gradient-to-br from-cyan-100 to-cyan-50 shadow-md' : 'border-slate-200 hover:border-cyan-300 bg-white']"
+                         @click="selectBox(key)">
+                        <div class="text-3xl text-center mb-2">{{ boxType.icon }}</div>
+                        <div class="text-sm font-bold text-slate-800 text-center">{{ boxType.name }}</div>
+                        <div class="text-xs text-slate-500 text-center mt-1">{{ boxType.category }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="section-title text-cyan-700">
+                    <span class="text-2xl mr-2">📐</span>
+                    尺寸参数
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    <div>
+                        <label>成品长度 L (mm)</label>
+                        <input type="number" v-model.number="dieCutter.dimensions.L" min="10" class="w-full">
+                    </div>
+                    <div>
+                        <label>成品宽度 W (mm)</label>
+                        <input type="number" v-model.number="dieCutter.dimensions.W" min="10" class="w-full">
+                    </div>
+                    <div>
+                        <label>成品高度 H (mm)</label>
+                        <input type="number" v-model.number="dieCutter.dimensions.H" min="5" class="w-full">
+                    </div>
+                    <div v-if="currentBoxType.hasLidHeight">
+                        <label>上盖高度 (mm)</label>
+                        <input type="number" v-model.number="dieCutter.dimensions.lidHeight" min="10" class="w-full">
+                    </div>
+                    <div v-if="currentBoxType.hasBookSpine">
+                        <label>书脊厚度 (mm)</label>
+                        <input type="number" v-model.number="dieCutter.dimensions.bookSpine" min="1" class="w-full">
+                    </div>
+                    <div v-if="currentBoxType.hasEdge">
+                        <label>包边尺寸 (mm)</label>
+                        <input type="number" v-model.number="dieCutter.dimensions.edgeSize" min="10" class="w-full">
+                    </div>
+                    <div>
+                        <label>粘位 (mm)</label>
+                        <input type="number" v-model.number="dieCutter.dimensions.glue" min="8" max="30" class="w-full">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="section-title text-cyan-700" style="margin-bottom: 0;">
+                        <span class="text-2xl mr-2">📋</span>
+                        部件尺寸
+                    </div>
+                    <div class="text-sm text-slate-500">点击选择部件进行拼版，设置模数</div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div v-for="(part, key) in dieCutterParts" :key="key" 
+                         :class="['p-4 rounded-xl border-2 cursor-pointer transition-all duration-200', dieCutter.selectedParts.includes(key) ? 'border-green-500 bg-gradient-to-br from-green-100 to-green-50' : 'border-slate-200 hover:border-green-300 bg-white']"
+                         @click="toggleDieCutterPart(key)">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-bold text-slate-800">{{ part.name }}</span>
+                            <span :class="['text-xs px-2 py-0.5 rounded-full', part.type === 'gray' ? 'bg-slate-200 text-slate-600' : part.type === 'paper' ? 'bg-blue-200 text-blue-600' : 'bg-amber-200 text-amber-600']">{{ getPartTypeName(part.type) }}</span>
+                        </div>
+                        <div class="text-lg font-bold text-slate-800">{{ part.width.toFixed(1) }} × {{ part.height.toFixed(1) }} mm</div>
+                        <div class="text-xs text-slate-500 mt-1">面积: {{ (part.width * part.height / 1000000).toFixed(4) }} m²</div>
+                        <div v-if="dieCutter.selectedParts.includes(key)" class="mt-3">
+                            <label class="text-xs font-bold text-slate-600">模数</label>
+                            <input type="number" v-model.number="dieCutter.partQuantities[key]" min="1" max="100" class="w-full mt-1">
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border-l-4 border-cyan-500 rounded-r-lg">
+                    <div class="text-sm text-cyan-700 font-mono">{{ currentBoxType.formula }}</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="section-title text-cyan-700" style="margin-bottom: 0;">
+                        <span class="text-2xl mr-2">🎯</span>
+                        拼版设置
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="autoSelectPaper" class="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:shadow-lg">
+                            📄 自动选纸
+                        </button>
+                        <button @click="optimizeLayout" class="btn bg-gradient-to-r from-green-500 to-green-600 text-white hover:shadow-lg">
+                            🔄 自动优化
+                        </button>
+                        <button @click="clearDieCutterLayout" class="btn btn-secondary">
+                            清空
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <label>纸张规格</label>
+                        <select v-model="dieCutter.layout.paperType" class="w-full">
+                            <option value="big">大度全张 (1194×889)</option>
+                            <option value="normal">正度全张 (1092×787)</option>
+                            <option value="2k_big">大度2开 (597×889)</option>
+                            <option value="2k_normal">正度2开 (546×787)</option>
+                            <option value="4k_big">大度4开 (597×444)</option>
+                            <option value="4k_normal">正度4开 (546×393)</option>
+                            <option value="8k_big">大度8开 (298×444)</option>
+                            <option value="8k_normal">正度8开 (273×393)</option>
+                            <option value="16k_big">大度16开 (298×222)</option>
+                            <option value="16k_normal">正度16开 (273×196)</option>
+                            <option value="32k_big">大度32开 (149×222)</option>
+                            <option value="32k_normal">正度32开 (136×196)</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </div>
+                    <div v-if="dieCutter.layout.paperType === 'custom'">
+                        <label>纸张宽度 (mm)</label>
+                        <input type="number" v-model.number="dieCutter.layout.customWidth" min="500" class="w-full">
+                    </div>
+                    <div v-if="dieCutter.layout.paperType === 'custom'">
+                        <label>纸张高度 (mm)</label>
+                        <input type="number" v-model.number="dieCutter.layout.customHeight" min="500" class="w-full">
+                    </div>
+                    <div>
+                        <label>最小间距 (mm)</label>
+                        <input type="number" v-model.number="dieCutter.layout.gap" min="0" max="50" class="w-full">
+                        <div class="text-xs text-amber-600 mt-1">可按需调整，建议3-5mm</div>
+                    </div>
+                    <div>
+                        <label>最小边距 (mm)</label>
+                        <input type="number" v-model.number="dieCutter.layout.margin" min="0" max="100" class="w-full">
+                        <div class="text-xs text-amber-600 mt-1">可按需调整，建议10-20mm</div>
+                    </div>
+                </div>
+
+                <div class="mt-4 bg-gradient-to-br from-slate-50 to-white rounded-xl p-4 border-2 border-cyan-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="text-sm text-slate-600 font-bold">拼版预览</div>
+                        <div class="flex gap-4 text-sm">
+                            <span>已选 <span class="font-bold text-cyan-600">{{ dieCutter.totalPartCount }} 个部件</span></span>
+                            <span>利用率 <span class="font-bold text-green-600">{{ dieCutter.layoutUtilization.toFixed(1) }}%</span></span>
+                            <span class="flex items-center gap-2">
+                                <button @click="dieCutterZoom = Math.max(0.5, dieCutterZoom - 0.2)" class="px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded">−</button>
+                                <span class="text-xs text-slate-500">{{ Math.round(dieCutterZoom * 100) }}%</span>
+                                <button @click="dieCutterZoom = Math.min(3, dieCutterZoom + 0.2)" class="px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded">+</button>
+                                <button @click="dieCutterZoom = 1" class="px-2 py-1 text-xs bg-cyan-100 hover:bg-cyan-200 rounded text-cyan-600">1:1</button>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg border-2 border-cyan-200 p-4" style="min-height: 500px;" @wheel.prevent="handleDieCutterZoom">
+                        <div style="display: flex; justify-content: center; align-items: center; height: 100%; min-height: 450px; overflow: auto;">
+                            <svg :viewBox="'0 0 ' + dieCutter.paperWidth + ' ' + dieCutter.paperHeight" preserveAspectRatio="xMidYMid meet" 
+                                 :style="{ 
+                                     width: (dieCutterZoom * 450) + 'px', 
+                                     height: (dieCutterZoom * 350) + 'px',
+                                     transition: 'width 0.2s, height 0.2s'
+                                 }">
+                                <rect :x="0" :y="0" :width="dieCutter.paperWidth" :height="dieCutter.paperHeight" fill="#f0fdfa" stroke="#06b6d4" stroke-width="2"/>
+                                <rect v-if="dieCutter.layout.margin > 0" :x="dieCutter.layout.margin" :y="dieCutter.layout.margin" 
+                                      :width="dieCutter.paperWidth - dieCutter.layout.margin * 2" :height="dieCutter.paperHeight - dieCutter.layout.margin * 2" 
+                                      fill="none" stroke="rgba(6, 182, 212, 0.3)" stroke-width="1" stroke-dasharray="4 4"/>
+                                <g v-for="(item, index) in dieCutter.layoutItems" :key="index">
+                                    <rect :x="item.x" :y="item.y" :width="item.width" :height="item.height" 
+                                          :fill="getPartFillColor(item.type)" 
+                                          :stroke="getPartStrokeColor(item.type)" stroke-width="1.5"/>
+                                    <rect :x="item.x + 1" :y="item.y + 1" :width="item.width - 2" :height="item.height - 2" 
+                                          fill="none" :stroke="getPartStrokeColor(item.type)" stroke-width="0.5" stroke-dasharray="2 2"/>
+                                    <text :x="item.x + item.width / 2" :y="item.y + item.height / 2 - 8" 
+                                          text-anchor="middle" dominant-baseline="middle" fill="#334155" font-size="12" font-weight="bold">
+                                        {{ item.name }}
+                                    </text>
+                                    <text :x="item.x + item.width / 2" :y="item.y + item.height / 2 + 10" 
+                                          text-anchor="middle" dominant-baseline="middle" fill="#f59e0b" font-size="10">
+                                          #{{ item.index + 1 }}{{ item.rotated ? ' ↻' : '' }}
+                                    </text>
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mt-4">
+                        <div>
+                            <div class="text-xs text-slate-500">纸张规格</div>
+                            <div class="font-bold text-cyan-600">{{ dieCutter.currentPaperName }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500">纸张尺寸</div>
+                            <div class="font-bold">{{ dieCutter.paperWidth }} × {{ dieCutter.paperHeight }} mm</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500">拼版尺寸</div>
+                            <div class="font-bold">{{ dieCutter.layoutWidth.toFixed(1) }} × {{ dieCutter.layoutHeight.toFixed(1) }} mm</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500">部件总面积</div>
+                            <div class="font-bold">{{ dieCutter.totalPartsArea.toFixed(4) }} m²</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500">利用率</div>
+                            <div class="font-bold text-green-600">{{ dieCutter.layoutUtilization.toFixed(1) }}%</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500">部件数量</div>
+                            <div class="font-bold">{{ dieCutter.totalPartCount }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button @click="addDieCutterLayout" class="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white mt-4 hover:shadow-lg">
+                    + 添加开版
+                </button>
+
+                <div v-if="dieCutter.layouts.length > 0" class="space-y-3 mt-4">
+                    <div v-for="(layout, index) in dieCutter.layouts" :key="index" class="p-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-200 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-slate-800">开版 {{ index + 1 }}</div>
+                            <div class="text-sm text-slate-500 mt-1">
+                                部件: {{ layout.parts.join(', ') }} | 
+                                尺寸: {{ layout.width.toFixed(0) }} × {{ layout.height.toFixed(0) }} mm |
+                                利用率: {{ layout.utilization.toFixed(1) }}%
+                            </div>
+                        </div>
+                        <button @click="removeDieCutterLayout(index)" class="btn bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-lg">
+                            🗑️ 删除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -2979,13 +3216,581 @@
                 const viewingRecord = ref(null);
                 const collapseProcesses = ref(false);
 
+                const selectedBoxType = ref('tiandigai_full');
+                const dieCutterZoom = ref(1);
+                const dieCutter = ref({
+                    dimensions: { L: 200, W: 100, H: 50, lidHeight: 50, bookSpine: 10, edgeSize: 20, glue: 15 },
+                    layout: { paperType: 'big', customWidth: 1194, customHeight: 889, gap: 5, margin: 10 },
+                    selectedParts: [],
+                    layouts: [],
+                    layoutItems: [],
+                    partQuantities: {}
+                });
+
+                const boxTypes = {
+                    tiandigai_full: { name: '天地盖(全包)', category: '精装盒', icon: '📦', hasLidHeight: true, hasBookSpine: false, hasEdge: false, formula: '上盖灰板=L+H×2，上盖面纸=灰板+H×2+粘位，内贴=L×W' },
+                    tiandigai_edge: { name: '天地盖(包边)', category: '精装盒', icon: '📦', hasLidHeight: true, hasBookSpine: false, hasEdge: true, formula: '面纸=灰板+包边×2，内贴=L×W' },
+                    fangai_3_full: { name: '翻盖盒(三连板全包)', category: '精装盒', icon: '📚', hasLidHeight: false, hasBookSpine: false, hasEdge: false, formula: '外壳灰板=L×2+W，内盒灰板=L+H×2，内贴=L×W' },
+                    fangai_3_edge: { name: '翻盖盒(三连板包边)', category: '精装盒', icon: '📚', hasLidHeight: false, hasBookSpine: false, hasEdge: true, formula: '面纸=灰板+包边×2' },
+                    fangai_4_full: { name: '翻盖盒(四连板)', category: '精装盒', icon: '📚', hasLidHeight: false, hasBookSpine: false, hasEdge: false, formula: '外壳灰板=L×2+W+H，内盒灰板=L+H×2' },
+                    shuxing_full: { name: '书型盒(全包)', category: '精装盒', icon: '📖', hasLidHeight: false, hasBookSpine: true, hasEdge: false, formula: '外壳=L×2+W+书脊，内盒=L+H×2' }
+                };
+
+                const paperSizes = [
+                    { type: 'big', name: '大度全张', width: 1194, height: 889 },
+                    { type: 'normal', name: '正度全张', width: 1092, height: 787 },
+                    { type: '2k_big', name: '大度2开', width: 597, height: 889 },
+                    { type: '2k_normal', name: '正度2开', width: 546, height: 787 },
+                    { type: '4k_big', name: '大度4开', width: 597, height: 444 },
+                    { type: '4k_normal', name: '正度4开', width: 546, height: 393 },
+                    { type: '8k_big', name: '大度8开', width: 298, height: 444 },
+                    { type: '8k_normal', name: '正度8开', width: 273, height: 393 },
+                    { type: '16k_big', name: '大度16开', width: 298, height: 222 },
+                    { type: '16k_normal', name: '正度16开', width: 273, height: 196 },
+                    { type: '32k_big', name: '大度32开', width: 149, height: 222 },
+                    { type: '32k_normal', name: '正度32开', width: 136, height: 196 },
+                    { type: 'custom', name: '自定义', width: 1194, height: 889 }
+                ];
+
+                const currentBoxType = computed(() => boxTypes[selectedBoxType.value]);
+
+                const dieCutterParts = computed(() => {
+                    const L = dieCutter.value.dimensions.L;
+                    const W = dieCutter.value.dimensions.W;
+                    const H = dieCutter.value.dimensions.H;
+                    const LH = dieCutter.value.dimensions.lidHeight || H;
+                    const BS = dieCutter.value.dimensions.bookSpine || 0;
+                    const ES = dieCutter.value.dimensions.edgeSize || 0;
+                    const G = dieCutter.value.dimensions.glue;
+
+                    switch(selectedBoxType.value) {
+                        case 'tiandigai_full': {
+                            const topGBL = L + LH * 2;
+                            const topGBW = W + LH * 2;
+                            const topPL = topGBL + LH * 2 + G * 2;
+                            const topPW = topGBW + LH * 2 + G * 2;
+                            const bottomGBL = L + H * 2;
+                            const bottomGBW = W + H * 2;
+                            const bottomPL = bottomGBL + H * 2 + G * 2;
+                            const bottomPW = bottomGBW + H * 2 + G * 2;
+                            return {
+                                top_gray: { name: '上盖灰板', width: topGBL, height: topGBW, type: 'gray' },
+                                top_paper: { name: '上盖面纸', width: topPL, height: topPW, type: 'paper' },
+                                top_liner: { name: '上盖内贴', width: L, height: W, type: 'liner' },
+                                bottom_gray: { name: '下盖灰板', width: bottomGBL, height: bottomGBW, type: 'gray' },
+                                bottom_paper: { name: '下盖面纸', width: bottomPL, height: bottomPW, type: 'paper' },
+                                bottom_liner: { name: '下盖内贴', width: L, height: W, type: 'liner' }
+                            };
+                        }
+                        case 'tiandigai_edge': {
+                            const topGBL = L + LH * 2;
+                            const topGBW = W + LH * 2;
+                            const bottomGBL = L + H * 2;
+                            const bottomGBW = W + H * 2;
+                            return {
+                                top_gray: { name: '上盖灰板', width: topGBL, height: topGBW, type: 'gray' },
+                                top_paper: { name: '上盖面纸', width: topGBL + ES * 2, height: topGBW + ES * 2, type: 'paper' },
+                                top_liner: { name: '上盖内贴', width: L, height: W, type: 'liner' },
+                                bottom_gray: { name: '下盖灰板', width: bottomGBL, height: bottomGBW, type: 'gray' },
+                                bottom_paper: { name: '下盖面纸', width: bottomGBL + ES * 2, height: bottomGBW + ES * 2, type: 'paper' },
+                                bottom_liner: { name: '下盖内贴', width: L, height: W, type: 'liner' }
+                            };
+                        }
+                        case 'fangai_3_full': {
+                            const outerGBL = L * 2 + W;
+                            const outerGBW = W + H * 2;
+                            const innerGBL = L + H * 2;
+                            const innerGBW = W + H;
+                            return {
+                                outer_gray: { name: '外壳灰板', width: outerGBL, height: outerGBW, type: 'gray' },
+                                outer_paper: { name: '外壳面纸', width: outerGBL + G * 2, height: outerGBW + G * 2, type: 'paper' },
+                                outer_liner: { name: '外壳内贴', width: L + H, height: W + 20, type: 'liner' },
+                                inner_gray: { name: '内盒灰板', width: innerGBL, height: innerGBW, type: 'gray' },
+                                inner_paper: { name: '内盒面纸', width: innerGBL + G * 2, height: innerGBW + G * 2, type: 'paper' },
+                                inner_liner: { name: '内盒内贴', width: L, height: W, type: 'liner' }
+                            };
+                        }
+                        case 'fangai_3_edge': {
+                            const outerGBL = L * 2 + W;
+                            const outerGBW = W + H * 2;
+                            const innerGBL = L + H * 2;
+                            const innerGBW = W + H;
+                            return {
+                                outer_gray: { name: '外壳灰板', width: outerGBL, height: outerGBW, type: 'gray' },
+                                outer_paper: { name: '外壳面纸', width: outerGBL, height: outerGBW, type: 'paper' },
+                                outer_liner: { name: '外壳内贴', width: L + H, height: W + 20, type: 'liner' },
+                                inner_gray: { name: '内盒灰板', width: innerGBL, height: innerGBW, type: 'gray' },
+                                inner_paper: { name: '内盒面纸', width: innerGBL + ES * 2, height: innerGBW + ES * 2, type: 'paper' },
+                                inner_liner: { name: '内盒内贴', width: L, height: W + 20, type: 'liner' }
+                            };
+                        }
+                        case 'fangai_4_full': {
+                            const outerGBL = L * 2 + W + H;
+                            const outerGBW = W + H * 2;
+                            const innerGBL = L + H * 2;
+                            const innerGBW = W + H;
+                            return {
+                                outer_gray: { name: '外壳灰板', width: outerGBL, height: outerGBW, type: 'gray' },
+                                outer_paper: { name: '外壳面纸', width: outerGBL + G * 2, height: outerGBW + G * 2, type: 'paper' },
+                                outer_liner: { name: '外壳内贴', width: L, height: W, type: 'liner' },
+                                inner_gray: { name: '内盒灰板', width: innerGBL, height: innerGBW, type: 'gray' },
+                                inner_paper: { name: '内盒面纸', width: innerGBL + G * 2, height: innerGBW + G * 2, type: 'paper' },
+                                inner_liner: { name: '内盒内贴', width: L, height: W, type: 'liner' }
+                            };
+                        }
+                        case 'shuxing_full': {
+                            const outerGBL = L * 2 + W + BS;
+                            const outerGBW = W + H * 2;
+                            const innerGBL = L + H * 2;
+                            const innerGBW = W + H;
+                            return {
+                                outer_gray: { name: '外壳灰板', width: outerGBL, height: outerGBW, type: 'gray' },
+                                outer_paper: { name: '外壳面纸', width: outerGBL + G * 2, height: outerGBW + G * 2, type: 'paper' },
+                                outer_liner: { name: '外壳内贴', width: L, height: W, type: 'liner' },
+                                inner_gray: { name: '内盒灰板', width: innerGBL, height: innerGBW, type: 'gray' },
+                                inner_paper: { name: '内盒面纸', width: innerGBL + G * 2, height: innerGBW + G * 2, type: 'paper' },
+                                inner_liner: { name: '内盒内贴', width: L, height: W, type: 'liner' }
+                            };
+                        }
+                        default: {
+                            return {
+                                part1: { name: '部件1', width: 100, height: 100, type: 'gray' },
+                                part2: { name: '部件2', width: 100, height: 100, type: 'paper' },
+                                part3: { name: '部件3', width: 100, height: 100, type: 'gray' },
+                                part4: { name: '部件4', width: 100, height: 100, type: 'paper' }
+                            };
+                        }
+                    }
+                });
+
+                Object.defineProperty(dieCutter.value, 'paperWidth', {
+                    get: function() {
+                        const paperSize = paperSizes.find(p => p.type === this.layout.paperType);
+                        if (paperSize && this.layout.paperType !== 'custom') {
+                            return paperSize.width;
+                        }
+                        return this.customWidth;
+                    }
+                });
+
+                Object.defineProperty(dieCutter.value, 'paperHeight', {
+                    get: function() {
+                        const paperSize = paperSizes.find(p => p.type === this.layout.paperType);
+                        if (paperSize && this.layout.paperType !== 'custom') {
+                            return paperSize.height;
+                        }
+                        return this.customHeight;
+                    }
+                });
+
+                Object.defineProperty(dieCutter.value, 'currentPaperName', {
+                    get: function() {
+                        const paperSize = paperSizes.find(p => p.type === this.layout.paperType);
+                        if (paperSize && this.layout.paperType !== 'custom') {
+                            return paperSize.name;
+                        }
+                        return '自定义';
+                    }
+                });
+
+                const dieCutterSelectedPartsWithQuantity = computed(() => {
+                    const items = [];
+                    dieCutter.value.selectedParts.forEach(key => {
+                        const qty = dieCutter.value.partQuantities[key] || 1;
+                        for (let i = 0; i < qty; i++) {
+                            items.push({ ...dieCutterParts.value[key], key: key, index: i });
+                        }
+                    });
+                    return items;
+                });
+
+                Object.defineProperty(dieCutter.value, 'totalPartCount', {
+                    get: function() {
+                        let count = 0;
+                        this.selectedParts.forEach(key => {
+                            count += this.partQuantities[key] || 1;
+                        });
+                        return count;
+                    }
+                });
+
+                Object.defineProperty(dieCutter.value, 'layoutWidth', {
+                    get: function() {
+                        if (this.layoutItems.length === 0) return 0;
+                        const maxX = Math.max(...this.layoutItems.map(item => item.x + item.width));
+                        return maxX + this.layout.margin;
+                    }
+                });
+
+                Object.defineProperty(dieCutter.value, 'layoutHeight', {
+                    get: function() {
+                        if (this.layoutItems.length === 0) return 0;
+                        const maxY = Math.max(...this.layoutItems.map(item => item.y + item.height));
+                        return maxY + this.layout.margin;
+                    }
+                });
+
+                const dieCutterTotalPartsArea = computed(() => {
+                    return dieCutterSelectedPartsWithQuantity.value.reduce((sum, part) => sum + (part.width * part.height) / 1000000, 0);
+                });
+
+                Object.defineProperty(dieCutter.value, 'totalPartsArea', {
+                    get: function() {
+                        return dieCutterTotalPartsArea.value;
+                    }
+                });
+
+                Object.defineProperty(dieCutter.value, 'layoutUtilization', {
+                    get: function() {
+                        const paperArea = (this.paperWidth * this.paperHeight) / 1000000;
+                        if (paperArea === 0) return 0;
+                        const placedArea = this.layoutItems.reduce((sum, item) => sum + (item.width * item.height) / 1000000, 0);
+                        return (placedArea / paperArea) * 100;
+                    }
+                });
+
+                const selectBox = (key) => {
+                    selectedBoxType.value = key;
+                    clearDieCutterLayout();
+                };
+
+                const getPartTypeName = (type) => {
+                    switch(type) {
+                        case 'gray': return '灰板';
+                        case 'paper': return '面纸';
+                        case 'liner': return '内贴';
+                        default: return type;
+                    }
+                };
+
+                const getPartFillColor = (type) => {
+                    switch(type) {
+                        case 'gray': return 'rgba(156, 163, 175, 0.3)';
+                        case 'paper': return 'rgba(59, 130, 246, 0.2)';
+                        case 'liner': return 'rgba(245, 158, 11, 0.2)';
+                        default: return 'rgba(255,255,255,0.1)';
+                    }
+                };
+
+                const getPartStrokeColor = (type) => {
+                    switch(type) {
+                        case 'gray': return '#9ca3af';
+                        case 'paper': return '#3b82f6';
+                        case 'liner': return '#f59e0b';
+                        default: return '#ffffff';
+                    }
+                };
+
+                const toggleDieCutterPart = (key) => {
+                    const index = dieCutter.value.selectedParts.indexOf(key);
+                    if (index > -1) {
+                        dieCutter.value.selectedParts.splice(index, 1);
+                        delete dieCutter.value.partQuantities[key];
+                    } else {
+                        dieCutter.value.selectedParts.push(key);
+                        dieCutter.value.partQuantities[key] = 1;
+                    }
+                    updateDieCutterLayout();
+                };
+
+                const updateDieCutterLayout = () => {
+                    if (dieCutter.value.selectedParts.length === 0) {
+                        dieCutter.value.layoutItems = [];
+                        return;
+                    }
+
+                    const margin = dieCutter.value.layout.margin;
+                    const gap = dieCutter.value.layout.gap;
+                    const pw = dieCutter.value.paperWidth - margin * 2;
+                    const ph = dieCutter.value.paperHeight - margin * 2;
+
+                    const partsList = dieCutterSelectedPartsWithQuantity.value.map(p => ({...p}));
+                    const sortedParts = [...partsList].sort((a, b) => (b.width * b.height) - (a.width * a.height));
+
+                    let items = [];
+                    let currentX = margin;
+                    let currentY = margin;
+                    let maxHeightInRow = 0;
+
+                    for (const part of sortedParts) {
+                        let w = part.width;
+                        let h = part.height;
+                        let rotated = false;
+
+                        if (w > pw && h <= pw) {
+                            const temp = w;
+                            w = h;
+                            h = temp;
+                            rotated = true;
+                        }
+
+                        if (w > pw || h > ph) {
+                            continue;
+                        }
+
+                        if (currentX + w > pw + margin) {
+                            currentX = margin;
+                            currentY += maxHeightInRow + gap;
+                            maxHeightInRow = 0;
+                        }
+
+                        if (currentY + h <= ph + margin) {
+                            items.push({ 
+                                ...part, 
+                                x: currentX, 
+                                y: currentY, 
+                                width: w, 
+                                height: h, 
+                                rotated: rotated 
+                            });
+                            maxHeightInRow = Math.max(maxHeightInRow, h);
+                            currentX += w + gap;
+                        }
+                    }
+
+                    dieCutter.value.layoutItems = items;
+
+                    if (items.length < sortedParts.length) {
+                        alert('警告：部分部件无法放入当前纸张，请选择更大的纸张规格');
+                    }
+                };
+
+                const testPaperSize = (paperType, customWidth, customHeight) => {
+                    const margin = dieCutter.value.layout.margin;
+                    const gap = dieCutter.value.layout.gap;
+
+                    const paperSize = paperSizes.find(p => p.type === paperType);
+                    let paperW, paperH;
+                    if (paperSize && paperType !== 'custom') {
+                        paperW = paperSize.width;
+                        paperH = paperSize.height;
+                    } else {
+                        paperW = customWidth;
+                        paperH = customHeight;
+                    }
+
+                    const pw = paperW - margin * 2;
+                    const ph = paperH - margin * 2;
+
+                    const partsToPlace = dieCutterSelectedPartsWithQuantity.value.map(p => ({...p}));
+
+                    for (const part of partsToPlace) {
+                        const partW = part.width;
+                        const partH = part.height;
+                        const canFitNormal = partW <= pw && partH <= ph;
+                        const canFitRotated = partH <= pw && partW <= ph;
+                        if (!canFitNormal && !canFitRotated) {
+                            return { success: false, layout: [], utilization: 0 };
+                        }
+                    }
+
+                    let bestLayout = [];
+                    let bestUtilization = 0;
+
+                    const generateRotations = (items, depth = 0) => {
+                        if (depth >= items.length) {
+                            const layout = tryLayout(items, pw, ph, margin, gap);
+                            const utilization = calculateUtilization(layout, paperW, paperH);
+                            if (layout.length === partsToPlace.length && utilization > bestUtilization) {
+                                bestUtilization = utilization;
+                                bestLayout = [...layout];
+                            }
+                            return;
+                        }
+
+                        generateRotations(items, depth + 1);
+
+                        const original = { ...items[depth] };
+                        items[depth] = { ...original, width: original.height, height: original.width, rotated: true };
+                        generateRotations(items, depth + 1);
+                        items[depth] = original;
+                    };
+
+                    const sortings = [
+                        (a, b) => (b.height) - (a.height),
+                        (a, b) => (b.width) - (a.width),
+                        (a, b) => (b.width * b.height) - (a.width * a.height),
+                        (a, b) => (a.height) - (b.height),
+                    ];
+
+                    sortings.forEach(sortFn => {
+                        const sorted = [...partsToPlace].sort(sortFn);
+                        generateRotations(sorted);
+                    });
+
+                    return { success: bestLayout.length === partsToPlace.length, layout: bestLayout, utilization: bestUtilization };
+                };
+
+                const autoSelectPaper = () => {
+                    if (dieCutter.value.selectedParts.length === 0) {
+                        alert('请先选择部件');
+                        return;
+                    }
+
+                    const testPapers = [
+                        { type: '16k_normal', name: '正度16开', width: 273, height: 196 },
+                        { type: '16k_big', name: '大度16开', width: 298, height: 222 },
+                        { type: '8k_normal', name: '正度8开', width: 273, height: 393 },
+                        { type: '8k_big', name: '大度8开', width: 298, height: 444 },
+                        { type: '4k_normal', name: '正度4开', width: 546, height: 393 },
+                        { type: '4k_big', name: '大度4开', width: 597, height: 444 },
+                        { type: '2k_normal', name: '正度2开', width: 546, height: 787 },
+                        { type: '2k_big', name: '大度2开', width: 597, height: 889 },
+                        { type: 'normal', name: '正度全张', width: 1092, height: 787 },
+                        { type: 'big', name: '大度全张', width: 1194, height: 889 }
+                    ];
+
+                    let bestPaper = null;
+                    let bestLayout = [];
+                    let bestUtilization = 0;
+
+                    for (let i = 0; i < testPapers.length; i++) {
+                        const paper = testPapers[i];
+                        const result = testPaperSize(paper.type, paper.width, paper.height);
+
+                        if (result.success) {
+                            if (result.utilization > bestUtilization) {
+                                bestUtilization = result.utilization;
+                                bestPaper = paper;
+                                bestLayout = result.layout;
+                            }
+                        }
+                    }
+
+                    if (bestPaper) {
+                        dieCutter.value.layout.paperType = bestPaper.type;
+                        dieCutter.value.layoutItems = bestLayout;
+                        alert('已选择能容纳所有部件的最小纸张：' + bestPaper.name + '，利用率 ' + bestUtilization.toFixed(1) + '%');
+                    } else {
+                        alert('无法用现有纸张尺寸容纳所有部件，请使用自定义纸张');
+                    }
+                };
+
+                const optimizeLayout = () => {
+                    if (dieCutter.value.selectedParts.length === 0) {
+                        alert('请先选择部件');
+                        return;
+                    }
+
+                    const margin = dieCutter.value.layout.margin;
+                    const gap = dieCutter.value.layout.gap;
+                    const pw = dieCutter.value.paperWidth - margin * 2;
+                    const ph = dieCutter.value.paperHeight - margin * 2;
+
+                    let bestLayout = [];
+                    let bestUtilization = 0;
+                    const partsToPlace = dieCutterSelectedPartsWithQuantity.value.map(p => ({...p}));
+
+                    const generateRotations = (items, depth = 0) => {
+                        if (depth >= items.length) {
+                            const layout = tryLayout(items, pw, ph, margin, gap);
+                            const utilization = calculateUtilization(layout, dieCutter.value.paperWidth, dieCutter.value.paperHeight);
+                            if (utilization > bestUtilization) {
+                                bestUtilization = utilization;
+                                bestLayout = [...layout];
+                            }
+                            return;
+                        }
+
+                        generateRotations(items, depth + 1);
+
+                        const original = { ...items[depth] };
+                        items[depth] = { ...original, width: original.height, height: original.width, rotated: true };
+                        generateRotations(items, depth + 1);
+                        items[depth] = original;
+                    };
+
+                    const sortings = [
+                        (a, b) => (b.height) - (a.height),
+                        (a, b) => (b.width) - (a.width),
+                        (a, b) => (b.width * b.height) - (a.width * a.height),
+                        (a, b) => (a.height) - (b.height),
+                    ];
+
+                    sortings.forEach(sortFn => {
+                        const sorted = [...partsToPlace].sort(sortFn);
+                        generateRotations(sorted);
+                    });
+
+                    dieCutter.value.layoutItems = bestLayout;
+
+                    if (bestLayout.length < partsToPlace.length) {
+                        alert('注意：部分部件无法放入纸张，已放置 ' + bestLayout.length + '/' + partsToPlace.length + ' 个');
+                    }
+                };
+
+                const tryLayout = (items, pw, ph, margin, gap) => {
+                    let layout = [];
+                    let currentX = margin;
+                    let currentY = margin;
+                    let maxHeightInRow = 0;
+
+                    for (const part of items) {
+                        if (part.width > pw || part.height > ph) {
+                            continue;
+                        }
+
+                        if (currentX + part.width > pw + margin) {
+                            currentX = margin;
+                            currentY += maxHeightInRow + gap;
+                            maxHeightInRow = 0;
+                        }
+
+                        if (currentY + part.height <= ph + margin) {
+                            layout.push({ ...part, x: currentX, y: currentY });
+                            maxHeightInRow = Math.max(maxHeightInRow, part.height);
+                            currentX += part.width + gap;
+                        }
+                    }
+
+                    return layout;
+                };
+
+                const calculateUtilization = (layout, pw, ph) => {
+                    const paperArea = (pw * ph) / 1000000;
+                    if (paperArea === 0) return 0;
+                    const placedArea = layout.reduce((sum, item) => sum + (item.width * item.height) / 1000000, 0);
+                    return (placedArea / paperArea) * 100;
+                };
+
+                const clearDieCutterLayout = () => {
+                    dieCutter.value.selectedParts = [];
+                    dieCutter.value.partQuantities = {};
+                    dieCutter.value.layoutItems = [];
+                };
+
+                const addDieCutterLayout = () => {
+                    if (dieCutter.value.selectedParts.length === 0) {
+                        alert('请先选择部件');
+                        return;
+                    }
+
+                    const partDesc = dieCutter.value.selectedParts.map(key => {
+                        const qty = dieCutter.value.partQuantities[key] || 1;
+                        return dieCutterParts.value[key].name + '×' + qty;
+                    });
+
+                    dieCutter.value.layouts.push({
+                        parts: partDesc,
+                        width: dieCutter.value.layoutWidth,
+                        height: dieCutter.value.layoutHeight,
+                        utilization: dieCutter.value.layoutUtilization
+                    });
+                    clearDieCutterLayout();
+                };
+
+                const removeDieCutterLayout = (index) => {
+                    dieCutter.value.layouts.splice(index, 1);
+                };
+
+                const handleDieCutterZoom = (e) => {
+                    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                    dieCutterZoom.value = Math.max(0.3, Math.min(3, dieCutterZoom.value + delta));
+                };
+
                 const goToPage = (page) => {
                     currentPage.value = page;
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                };
-
-                const goToDieCutter = () => {
-                    window.open('die_cutter.html', '_blank');
                 };
 
                 const formatDateTime = (timestamp) => {
@@ -4396,7 +5201,8 @@ ${matDetails}
                     calculateAllTiers, addTierConfig, removeTierConfig, viewTierDetail, copyTierDetail, copyTierAsImage, showQuoteDetail, copyQuoteDetail, copyQuoteAsImage,
                     allMaterialIds, allMaterials, processNames, calcMaterialCost, calcProcessTotal, isAreaBased, hasPlateFee, isSurfaceProcess, onProcessChange, getProcessDim, getProcessLoss,
                     getPaperKai, formatKDetail, calcK, formatRMB, formatUSD, formatInt, formatWeight, formatVol3, formatVol1, autoSelectPaperType, packingUnits, totalBoxes, boxSize, boxVolM3, singleProductWeight, singleBoxWeight, totalActualWeight, totalVolWeightSea, totalVolWeightExpress, totalCBM, cartonGirth, singleVolWeightSea, singleVolWeightExpress, isOverWeight,
-                    currentPage, viewingRecord, formatDateTime, getRecordCost, getRecordFactoryPrice, viewRecord, editRecord, collapseProcesses, goToPage, goToDieCutter,
+                    currentPage, viewingRecord, formatDateTime, getRecordCost, getRecordFactoryPrice, viewRecord, editRecord, collapseProcesses, goToPage,
+                    selectedBoxType, dieCutter, dieCutterZoom, boxTypes, paperSizes, currentBoxType, dieCutterParts, selectBox, getPartTypeName, getPartFillColor, getPartStrokeColor, toggleDieCutterPart, updateDieCutterLayout, autoSelectPaper, optimizeLayout, clearDieCutterLayout, addDieCutterLayout, removeDieCutterLayout, handleDieCutterZoom,
                     totalACost, totalBCost, totalCCost, totalPrintingCost, totalPaperCost, totalOtherProcessCost, totalCartonCost, totalProcessCost, totalAccCost, manualCost, totalCostNoShip, totalCostAll, factoryPrice, unitPrice,
                     usdTotalPrice, usdUnitPrice, records, currentRecordId, saveRecord, loadRecord, deleteRecord, resetForm,
                     templates, saveTemplate, loadTemplate, deleteTemplate,
