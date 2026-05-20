@@ -2317,28 +2317,20 @@
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div v-for="(part, key) in dieCutterParts" :key="key" 
-<<<<<<< HEAD
                          :class="['p-4 rounded-xl border-2 transition-all duration-200', 
                                   dieCutter.usedParts.includes(key) ? 'border-slate-300 bg-slate-100 cursor-not-allowed opacity-50' : 
                                   dieCutter.selectedParts.includes(key) ? 'border-green-500 bg-gradient-to-br from-green-100 to-green-50 cursor-pointer' : 
                                   'border-slate-200 hover:border-green-300 bg-white cursor-pointer']"
                          @click="!dieCutter.usedParts.includes(key) && toggleDieCutterPart(key)">
-=======
-                         :class="['p-4 rounded-xl border-2 cursor-pointer transition-all duration-200', dieCutter.selectedParts.includes(key) ? 'border-green-500 bg-gradient-to-br from-green-100 to-green-50' : 'border-slate-200 hover:border-green-300 bg-white']"
-                         @click="toggleDieCutterPart(key)">
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                         <div class="flex justify-between items-center mb-2">
                             <span class="text-sm font-bold text-slate-800">{{ part.name }}</span>
                             <span :class="['text-xs px-2 py-0.5 rounded-full', part.type === 'gray' ? 'bg-slate-200 text-slate-600' : part.type === 'paper' ? 'bg-blue-200 text-blue-600' : 'bg-amber-200 text-amber-600']">{{ getPartTypeName(part.type) }}</span>
                         </div>
                         <div class="text-lg font-bold text-slate-800">{{ part.width.toFixed(1) }} × {{ part.height.toFixed(1) }} mm</div>
                         <div class="text-xs text-slate-500 mt-1">面积: {{ (part.width * part.height / 1000000).toFixed(4) }} m²</div>
-<<<<<<< HEAD
                         <div v-if="dieCutter.usedParts.includes(key)" class="mt-2 text-xs text-slate-500 font-bold">
                             已用于开版
                         </div>
-=======
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                         <div v-if="dieCutter.selectedParts.includes(key)" class="mt-3">
                             <label class="text-xs font-bold text-slate-600">模数</label>
                             <input type="number" v-model.number="dieCutter.partQuantities[key]" min="1" max="100" class="w-full mt-1">
@@ -2480,7 +2472,6 @@
                     </div>
                 </div>
 
-<<<<<<< HEAD
                 <div class="flex gap-3 mt-4">
                     <button @click="showAddLayoutModal = true" class="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:shadow-lg">
                         + 添加开版
@@ -2520,25 +2511,6 @@
                                 🗑️
                             </button>
                         </div>
-=======
-                <button @click="addDieCutterLayout" class="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white mt-4 hover:shadow-lg">
-                    + 添加开版
-                </button>
-
-                <div v-if="dieCutter.layouts.length > 0" class="space-y-3 mt-4">
-                    <div v-for="(layout, index) in dieCutter.layouts" :key="index" class="p-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-200 flex justify-between items-center">
-                        <div>
-                            <div class="font-bold text-slate-800">开版 {{ index + 1 }}</div>
-                            <div class="text-sm text-slate-500 mt-1">
-                                部件: {{ layout.parts.join(', ') }} | 
-                                尺寸: {{ layout.width.toFixed(0) }} × {{ layout.height.toFixed(0) }} mm |
-                                利用率: {{ layout.utilization.toFixed(1) }}%
-                            </div>
-                        </div>
-                        <button @click="removeDieCutterLayout(index)" class="btn bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-lg">
-                            🗑️ 删除
-                        </button>
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                     </div>
                 </div>
             </div>
@@ -3345,12 +3317,8 @@
                     selectedParts: [],
                     layouts: [],
                     layoutItems: [],
-<<<<<<< HEAD
                     partQuantities: {},
                     usedParts: []
-=======
-                    partQuantities: {}
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                 });
 
                 const boxTypes = {
@@ -3608,13 +3576,10 @@
                 };
 
                 const toggleDieCutterPart = (key) => {
-<<<<<<< HEAD
                     if (dieCutter.value.usedParts.includes(key)) {
                         return;
                     }
 
-=======
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                     const index = dieCutter.value.selectedParts.indexOf(key);
                     if (index > -1) {
                         dieCutter.value.selectedParts.splice(index, 1);
@@ -3684,11 +3649,7 @@
                     dieCutter.value.layoutItems = items;
 
                     if (items.length < sortedParts.length) {
-<<<<<<< HEAD
                         // alert('警告：部分部件无法放入当前纸张，请选择更大的纸张规格');
-=======
-                        alert('警告：部分部件无法放入当前纸张，请选择更大的纸张规格');
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                     }
                 };
 
@@ -3760,11 +3721,7 @@
 
                 const autoSelectPaper = () => {
                     if (dieCutter.value.selectedParts.length === 0) {
-<<<<<<< HEAD
                         // alert('请先选择部件');
-=======
-                        alert('请先选择部件');
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                         return;
                     }
 
@@ -3801,25 +3758,15 @@
                     if (bestPaper) {
                         dieCutter.value.layout.paperType = bestPaper.type;
                         dieCutter.value.layoutItems = bestLayout;
-<<<<<<< HEAD
                         // alert('已选择能容纳所有部件的最小纸张：' + bestPaper.name + '，利用率 ' + bestUtilization.toFixed(1) + '%');
                     } else {
                         // alert('无法用现有纸张尺寸容纳所有部件，请使用自定义纸张');
-=======
-                        alert('已选择能容纳所有部件的最小纸张：' + bestPaper.name + '，利用率 ' + bestUtilization.toFixed(1) + '%');
-                    } else {
-                        alert('无法用现有纸张尺寸容纳所有部件，请使用自定义纸张');
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                     }
                 };
 
                 const optimizeLayout = () => {
                     if (dieCutter.value.selectedParts.length === 0) {
-<<<<<<< HEAD
                         // alert('请先选择部件');
-=======
-                        alert('请先选择部件');
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                         return;
                     }
 
@@ -3866,11 +3813,7 @@
                     dieCutter.value.layoutItems = bestLayout;
 
                     if (bestLayout.length < partsToPlace.length) {
-<<<<<<< HEAD
                         // alert('注意：部分部件无法放入纸张，已放置 ' + bestLayout.length + '/' + partsToPlace.length + ' 个');
-=======
-                        alert('注意：部分部件无法放入纸张，已放置 ' + bestLayout.length + '/' + partsToPlace.length + ' 个');
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                     }
                 };
 
@@ -3914,7 +3857,6 @@
                     dieCutter.value.layoutItems = [];
                 };
 
-<<<<<<< HEAD
                 const showAddLayoutModal = ref(false);
                 const newLayout = ref({
                     materialType: 'A',
@@ -3961,11 +3903,6 @@
                 const confirmAddLayout = () => {
                     if (dieCutter.value.selectedParts.length === 0) {
                         // alert('请先选择部件');
-=======
-                const addDieCutterLayout = () => {
-                    if (dieCutter.value.selectedParts.length === 0) {
-                        alert('请先选择部件');
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                         return;
                     }
 
@@ -3974,7 +3911,6 @@
                         return dieCutterParts.value[key].name + '×' + qty;
                     });
 
-<<<<<<< HEAD
                     const layoutInfo = {
                         parts: partDesc,
                         partKeys: [...dieCutter.value.selectedParts],
@@ -4299,19 +4235,6 @@
                             }
                         });
                     }
-=======
-                    dieCutter.value.layouts.push({
-                        parts: partDesc,
-                        width: dieCutter.value.layoutWidth,
-                        height: dieCutter.value.layoutHeight,
-                        utilization: dieCutter.value.layoutUtilization
-                    });
-                    clearDieCutterLayout();
-                };
-
-                const removeDieCutterLayout = (index) => {
-                    dieCutter.value.layouts.splice(index, 1);
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                 };
 
                 const handleDieCutterZoom = (e) => {
@@ -5734,11 +5657,8 @@ ${matDetails}
                     getPaperKai, formatKDetail, calcK, formatRMB, formatUSD, formatInt, formatWeight, formatVol3, formatVol1, autoSelectPaperType, packingUnits, totalBoxes, boxSize, boxVolM3, singleProductWeight, singleBoxWeight, totalActualWeight, totalVolWeightSea, totalVolWeightExpress, totalCBM, cartonGirth, singleVolWeightSea, singleVolWeightExpress, isOverWeight,
                     currentPage, viewingRecord, formatDateTime, getRecordCost, getRecordFactoryPrice, viewRecord, editRecord, collapseProcesses, goToPage,
                     selectedBoxType, dieCutter, dieCutterZoom, boxTypes, paperSizes, currentBoxType, dieCutterParts, selectBox, getPartTypeName, getPartFillColor, getPartStrokeColor, toggleDieCutterPart, updateDieCutterLayout, autoSelectPaper, optimizeLayout, clearDieCutterLayout, addDieCutterLayout, removeDieCutterLayout, handleDieCutterZoom,
-<<<<<<< HEAD
                     showAddLayoutModal, newLayout, filteredPapers, availableGrams, selectedPaperPrice, confirmAddLayout, fillPaperToQuote, 
                     getMaterialIcon, getMaterialName, fillAllLayoutsToQuote, generateMaterialId, defaultPaperPrices, defaultPaperSizes,
-=======
->>>>>>> 9622d4f01a627c9d1013596195169eeb5caf2516
                     totalACost, totalBCost, totalCCost, totalPrintingCost, totalPaperCost, totalOtherProcessCost, totalCartonCost, totalProcessCost, totalAccCost, manualCost, totalCostNoShip, totalCostAll, factoryPrice, unitPrice,
                     usdTotalPrice, usdUnitPrice, records, currentRecordId, saveRecord, loadRecord, deleteRecord, resetForm,
                     templates, saveTemplate, loadTemplate, deleteTemplate,
