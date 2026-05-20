@@ -1446,6 +1446,71 @@
             </div>
         </div>
 
+        <!-- Add Layout Modal -->
+        <div v-if="showAddLayoutModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+                <div class="bg-gradient-to-r from-cyan-500 to-cyan-600 p-4">
+                    <h3 class="text-lg font-bold text-white">添加开版</h3>
+                    <p class="text-sm text-cyan-100">设置材质信息并一键填入报价单</p>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="text-xs font-bold text-slate-600 mb-2 block">材质种类</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button @click="newLayout.materialType = 'A'"
+                                    :class="['p-3 rounded-lg border-2 text-center transition-all', newLayout.materialType === 'A' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-blue-300']">
+                                <div class="text-xl mb-1">📄</div>
+                                <div class="text-xs font-bold text-blue-600">面纸</div>
+                            </button>
+                            <button @click="newLayout.materialType = 'B'"
+                                    :class="['p-3 rounded-lg border-2 text-center transition-all', newLayout.materialType === 'B' ? 'border-orange-500 bg-orange-50' : 'border-slate-200 hover:border-orange-300']">
+                                <div class="text-xl mb-1">📦</div>
+                                <div class="text-xs font-bold text-orange-600">灰板</div>
+                            </button>
+                            <button @click="newLayout.materialType = 'C'"
+                                    :class="['p-3 rounded-lg border-2 text-center transition-all', newLayout.materialType === 'C' ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-green-300']">
+                                <div class="text-xl mb-1">📦</div>
+                                <div class="text-xs font-bold text-green-600">坑纸</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-slate-600 mb-2 block">纸张类别</label>
+                        <select v-model="newLayout.paperType" class="w-full px-3 py-2 border border-slate-200 rounded-lg">
+                            <option value="">请选择纸张类别</option>
+                            <option v-for="paper in filteredPapers" :key="paper.id" :value="paper.type">{{ paper.type }} {{ paper.gram }}g</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-slate-600 mb-2 block">克重</label>
+                        <select v-model="newLayout.gram" class="w-full px-3 py-2 border border-slate-200 rounded-lg">
+                            <option value="">请选择克重</option>
+                            <option v-for="gram in availableGrams" :key="gram" :value="gram">{{ gram }}g</option>
+                        </select>
+                    </div>
+
+                    <div v-if="selectedPaperPrice" class="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <div class="text-xs text-green-600">当前价格</div>
+                        <div class="text-lg font-bold text-green-700">{{ selectedPaperPrice.price }} {{ selectedPaperPrice.unit }}</div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button @click="fillPaperToQuote" class="flex-1 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-bold text-sm transition">
+                            ⚡ 一键填入报价单
+                        </button>
+                        <button @click="confirmAddLayout" class="flex-1 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg font-bold text-sm transition">
+                            确认添加
+                        </button>
+                    </div>
+                    <button @click="showAddLayoutModal = false" class="w-full py-2 text-slate-500 hover:text-slate-700 text-sm">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- History Page -->
         <div v-if="loggedUser && currentPage === 'history'" class="space-y-6">
             <div class="card">
@@ -2252,14 +2317,20 @@
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div v-for="(part, key) in dieCutterParts" :key="key" 
-                         :class="['p-4 rounded-xl border-2 cursor-pointer transition-all duration-200', dieCutter.selectedParts.includes(key) ? 'border-green-500 bg-gradient-to-br from-green-100 to-green-50' : 'border-slate-200 hover:border-green-300 bg-white']"
-                         @click="toggleDieCutterPart(key)">
+                         :class="['p-4 rounded-xl border-2 transition-all duration-200', 
+                                  dieCutter.usedParts.includes(key) ? 'border-slate-300 bg-slate-100 cursor-not-allowed opacity-50' : 
+                                  dieCutter.selectedParts.includes(key) ? 'border-green-500 bg-gradient-to-br from-green-100 to-green-50 cursor-pointer' : 
+                                  'border-slate-200 hover:border-green-300 bg-white cursor-pointer']"
+                         @click="!dieCutter.usedParts.includes(key) && toggleDieCutterPart(key)">
                         <div class="flex justify-between items-center mb-2">
                             <span class="text-sm font-bold text-slate-800">{{ part.name }}</span>
                             <span :class="['text-xs px-2 py-0.5 rounded-full', part.type === 'gray' ? 'bg-slate-200 text-slate-600' : part.type === 'paper' ? 'bg-blue-200 text-blue-600' : 'bg-amber-200 text-amber-600']">{{ getPartTypeName(part.type) }}</span>
                         </div>
                         <div class="text-lg font-bold text-slate-800">{{ part.width.toFixed(1) }} × {{ part.height.toFixed(1) }} mm</div>
                         <div class="text-xs text-slate-500 mt-1">面积: {{ (part.width * part.height / 1000000).toFixed(4) }} m²</div>
+                        <div v-if="dieCutter.usedParts.includes(key)" class="mt-2 text-xs text-slate-500 font-bold">
+                            已用于开版
+                        </div>
                         <div v-if="dieCutter.selectedParts.includes(key)" class="mt-3">
                             <label class="text-xs font-bold text-slate-600">模数</label>
                             <input type="number" v-model.number="dieCutter.partQuantities[key]" min="1" max="100" class="w-full mt-1">
@@ -2401,23 +2472,45 @@
                     </div>
                 </div>
 
-                <button @click="addDieCutterLayout" class="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white mt-4 hover:shadow-lg">
-                    + 添加开版
-                </button>
+                <div class="flex gap-3 mt-4">
+                    <button @click="showAddLayoutModal = true" class="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:shadow-lg">
+                        + 添加开版
+                    </button>
+                </div>
 
                 <div v-if="dieCutter.layouts.length > 0" class="space-y-3 mt-4">
-                    <div v-for="(layout, index) in dieCutter.layouts" :key="index" class="p-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-200 flex justify-between items-center">
-                        <div>
-                            <div class="font-bold text-slate-800">开版 {{ index + 1 }}</div>
-                            <div class="text-sm text-slate-500 mt-1">
-                                部件: {{ layout.parts.join(', ') }} | 
-                                尺寸: {{ layout.width.toFixed(0) }} × {{ layout.height.toFixed(0) }} mm |
-                                利用率: {{ layout.utilization.toFixed(1) }}%
-                            </div>
-                        </div>
-                        <button @click="removeDieCutterLayout(index)" class="btn bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-lg">
-                            🗑️ 删除
+                    <div class="flex justify-between items-center">
+                        <div class="text-sm font-bold text-slate-700">已保存的开版</div>
+                        <button @click="fillAllLayoutsToQuote" class="btn bg-gradient-to-r from-green-500 to-green-600 text-white hover:shadow-lg">
+                            ⚡ 一键填充所有材质
                         </button>
+                    </div>
+                    <div v-for="(layout, index) in dieCutter.layouts" :key="index" class="p-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-200">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="font-bold text-slate-800">开版 {{ index + 1 }}</div>
+                                <div class="text-sm text-slate-500 mt-1">
+                                    部件: {{ layout.parts.join(', ') }} | 
+                                    尺寸: {{ layout.width.toFixed(0) }} × {{ layout.height.toFixed(0) }} mm |
+                                    利用率: {{ layout.utilization.toFixed(1) }}%
+                                </div>
+                                <div v-if="layout.paperType" class="text-sm text-slate-600 mt-2 flex flex-wrap gap-3">
+                                    <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                                        <span class="text-lg">{{ getMaterialIcon(layout.materialType) }}</span>
+                                        {{ getMaterialName(layout.materialType) }}
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
+                                        {{ layout.paperType }} {{ layout.gram }}g
+                                    </span>
+                                    <span v-if="layout.price" class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                                        ¥{{ layout.price }} {{ layout.unit }}
+                                    </span>
+                                </div>
+                            </div>
+                            <button @click="removeDieCutterLayout(index)" class="btn bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-lg ml-3">
+                                🗑️
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3224,7 +3317,8 @@
                     selectedParts: [],
                     layouts: [],
                     layoutItems: [],
-                    partQuantities: {}
+                    partQuantities: {},
+                    usedParts: []
                 });
 
                 const boxTypes = {
@@ -3482,6 +3576,10 @@
                 };
 
                 const toggleDieCutterPart = (key) => {
+                    if (dieCutter.value.usedParts.includes(key)) {
+                        return;
+                    }
+
                     const index = dieCutter.value.selectedParts.indexOf(key);
                     if (index > -1) {
                         dieCutter.value.selectedParts.splice(index, 1);
@@ -3551,7 +3649,7 @@
                     dieCutter.value.layoutItems = items;
 
                     if (items.length < sortedParts.length) {
-                        alert('警告：部分部件无法放入当前纸张，请选择更大的纸张规格');
+                        // alert('警告：部分部件无法放入当前纸张，请选择更大的纸张规格');
                     }
                 };
 
@@ -3623,7 +3721,7 @@
 
                 const autoSelectPaper = () => {
                     if (dieCutter.value.selectedParts.length === 0) {
-                        alert('请先选择部件');
+                        // alert('请先选择部件');
                         return;
                     }
 
@@ -3660,15 +3758,15 @@
                     if (bestPaper) {
                         dieCutter.value.layout.paperType = bestPaper.type;
                         dieCutter.value.layoutItems = bestLayout;
-                        alert('已选择能容纳所有部件的最小纸张：' + bestPaper.name + '，利用率 ' + bestUtilization.toFixed(1) + '%');
+                        // alert('已选择能容纳所有部件的最小纸张：' + bestPaper.name + '，利用率 ' + bestUtilization.toFixed(1) + '%');
                     } else {
-                        alert('无法用现有纸张尺寸容纳所有部件，请使用自定义纸张');
+                        // alert('无法用现有纸张尺寸容纳所有部件，请使用自定义纸张');
                     }
                 };
 
                 const optimizeLayout = () => {
                     if (dieCutter.value.selectedParts.length === 0) {
-                        alert('请先选择部件');
+                        // alert('请先选择部件');
                         return;
                     }
 
@@ -3715,7 +3813,7 @@
                     dieCutter.value.layoutItems = bestLayout;
 
                     if (bestLayout.length < partsToPlace.length) {
-                        alert('注意：部分部件无法放入纸张，已放置 ' + bestLayout.length + '/' + partsToPlace.length + ' 个');
+                        // alert('注意：部分部件无法放入纸张，已放置 ' + bestLayout.length + '/' + partsToPlace.length + ' 个');
                     }
                 };
 
@@ -3759,9 +3857,52 @@
                     dieCutter.value.layoutItems = [];
                 };
 
-                const addDieCutterLayout = () => {
+                const showAddLayoutModal = ref(false);
+                const newLayout = ref({
+                    materialType: 'A',
+                    paperType: '',
+                    gram: ''
+                });
+
+                const filteredPapers = computed(() => {
+                    return paperPrices.value.filter(p => p.materialType === newLayout.value.materialType);
+                });
+
+                const availableGrams = computed(() => {
+                    const grams = [...new Set(filteredPapers.value.map(p => p.gram))];
+                    return grams.sort((a, b) => a - b);
+                });
+
+                const selectedPaperPrice = computed(() => {
+                    const found = paperPrices.value.find(p => 
+                        p.materialType === newLayout.value.materialType && 
+                        p.type === newLayout.value.paperType && 
+                        p.gram === parseInt(newLayout.value.gram)
+                    );
+                    return found ? { price: found.price, unit: found.unit } : null;
+                });
+
+                const getMaterialIcon = (type) => {
+                    switch(type) {
+                        case 'A': return '📄';
+                        case 'B': return '📦';
+                        case 'C': return '📦';
+                        default: return '📋';
+                    }
+                };
+
+                const getMaterialName = (type) => {
+                    switch(type) {
+                        case 'A': return '面纸';
+                        case 'B': return '灰板';
+                        case 'C': return '坑纸';
+                        default: return '其他';
+                    }
+                };
+
+                const confirmAddLayout = () => {
                     if (dieCutter.value.selectedParts.length === 0) {
-                        alert('请先选择部件');
+                        // alert('请先选择部件');
                         return;
                     }
 
@@ -3770,17 +3911,330 @@
                         return dieCutterParts.value[key].name + '×' + qty;
                     });
 
-                    dieCutter.value.layouts.push({
+                    const layoutInfo = {
                         parts: partDesc,
+                        partKeys: [...dieCutter.value.selectedParts],
                         width: dieCutter.value.layoutWidth,
                         height: dieCutter.value.layoutHeight,
-                        utilization: dieCutter.value.layoutUtilization
+                        utilization: dieCutter.value.layoutUtilization,
+                        materialType: newLayout.value.materialType,
+                        paperType: newLayout.value.paperType,
+                        gram: newLayout.value.gram,
+                        price: selectedPaperPrice.value ? selectedPaperPrice.value.price : 0,
+                        unit: selectedPaperPrice.value ? selectedPaperPrice.value.unit : ''
+                    };
+
+                    dieCutter.value.layouts.push(layoutInfo);
+
+                    dieCutter.value.selectedParts.forEach(key => {
+                        if (!dieCutter.value.usedParts.includes(key)) {
+                            dieCutter.value.usedParts.push(key);
+                        }
                     });
+
                     clearDieCutterLayout();
+                    showAddLayoutModal.value = false;
+                    
+                    newLayout.value = {
+                        materialType: 'A',
+                        paperType: '',
+                        gram: ''
+                    };
+                };
+
+                const generateMaterialId = (type) => {
+                    let count = 0;
+                    if (type === 'A') {
+                        count = facePapers.value.filter(p => p.id && p.id.toString().startsWith('A')).length + 1;
+                    } else if (type === 'B') {
+                        count = grayBoards.value.filter(p => p.id && p.id.toString().startsWith('B')).length + 1;
+                    } else if (type === 'C') {
+                        count = pitPapers.value.filter(p => p.id && p.id.toString().startsWith('C')).length + 1;
+                    }
+                    return type + count;
+                };
+
+                const defaultPaperPrices = [
+                    { id: 1, materialType: 'A', type: '白卡', gram: 250, price: 6200, unit: '元/吨' },
+                    { id: 2, materialType: 'A', type: '白卡', gram: 300, price: 6200, unit: '元/吨' },
+                    { id: 3, materialType: 'A', type: '白卡', gram: 350, price: 6200, unit: '元/吨' },
+                    { id: 4, materialType: 'A', type: '铜版纸', gram: 157, price: 5800, unit: '元/吨' },
+                    { id: 5, materialType: 'A', type: '铜版纸', gram: 200, price: 5800, unit: '元/吨' },
+                    { id: 6, materialType: 'A', type: '双铜纸', gram: 157, price: 5800, unit: '元/吨' },
+                    { id: 7, materialType: 'A', type: '双铜纸', gram: 200, price: 5800, unit: '元/吨' },
+                    { id: 8, materialType: 'A', type: '双铜纸', gram: 250, price: 6200, unit: '元/吨' },
+                    { id: 9, materialType: 'B', type: '灰板', gram: 1200, price: 2980, unit: '元/吨' },
+                    { id: 10, materialType: 'B', type: '灰板', gram: 1500, price: 3200, unit: '元/吨' },
+                    { id: 11, materialType: 'C', type: '坑纸', gram: 300, price: 1.5, unit: '元/平方' },
+                    { id: 12, materialType: 'C', type: '瓦楞纸', gram: 250, price: 1.2, unit: '元/平方' }
+                ];
+
+                const defaultPaperSizes = [
+                    { type: '大度', width: 1194, height: 889, name: '大度全开' },
+                    { type: '正度', width: 1092, height: 787, name: '正度全开' },
+                    { type: 'custom', width: 1000, height: 1000, name: '自定义' }
+                ];
+
+                const fillAllLayoutsToQuote = () => {
+                    try {
+                        if (!dieCutter || !dieCutter.value || !dieCutter.value.layouts || dieCutter.value.layouts.length === 0) {
+                            return;
+                        }
+
+                        const layouts = dieCutter.value.layouts;
+                        const currentPaperType = dieCutter.value.layout && dieCutter.value.layout.paperType ? dieCutter.value.layout.paperType : '大度';
+
+                        let filledCount = 0;
+                        
+                        layouts.forEach(layout => {
+                            if (!layout || !layout.materialType || !layout.paperType || !layout.gram) {
+                                return;
+                            }
+
+                            let paper = defaultPaperPrices.find(p => 
+                                p && p.materialType === layout.materialType && 
+                                p.type === layout.paperType && 
+                                p.gram === parseInt(layout.gram)
+                            );
+
+                            if (!paper) {
+                                paper = defaultPaperPrices.find(p => 
+                                    p && p.materialType === layout.materialType && 
+                                    p.gram === parseInt(layout.gram)
+                                );
+                            }
+
+                            if (!paper) {
+                                return;
+                            }
+
+                            const paperSize = defaultPaperSizes.find(ps => ps && ps.type === currentPaperType);
+                            const length = paperSize ? paperSize.width : (layout.width || 1000);
+                            const width = paperSize ? paperSize.height : (layout.height || 800);
+
+                            const materialId = generateMaterialId(layout.materialType);
+                            const currentConfig = typeof config !== 'undefined' && config && config.value ? config.value : { facePaperLoss: 0, grayBoardLoss: 0, pitPaperLoss: 0 };
+
+                            if (layout.materialType === 'A') {
+                                const existingIndex = facePapers.value.findIndex(p => p && p.id && p.id.toString().startsWith('A'));
+                                if (existingIndex === -1) {
+                                    facePapers.value.push({
+                                        id: materialId,
+                                        length: length,
+                                        width: width,
+                                        mod: 1,
+                                        items: 1,
+                                        paperType: currentPaperType,
+                                        paperCategory: layout.paperType,
+                                        gram: paper.gram,
+                                        tonPrice: paper.price,
+                                        priceUnit: paper.unit || '元/吨',
+                                        loss: currentConfig.facePaperLoss || 0,
+                                        showGramList: false
+                                    });
+                                } else {
+                                    facePapers.value[existingIndex] = {
+                                        ...facePapers.value[existingIndex],
+                                        id: materialId,
+                                        length: length,
+                                        width: width,
+                                        mod: 1,
+                                        items: 1,
+                                        paperType: currentPaperType,
+                                        paperCategory: layout.paperType,
+                                        gram: paper.gram,
+                                        tonPrice: paper.price,
+                                        priceUnit: paper.unit || '元/吨',
+                                        loss: currentConfig.facePaperLoss || 0
+                                    };
+                                }
+                                filledCount++;
+                            } else if (layout.materialType === 'B') {
+                                const existingIndex = grayBoards.value.findIndex(p => p && p.id && p.id.toString().startsWith('B'));
+                                if (existingIndex === -1) {
+                                    grayBoards.value.push({
+                                        id: materialId,
+                                        length: length,
+                                        width: width,
+                                        mod: 1,
+                                        items: 1,
+                                        paperType: currentPaperType,
+                                        paperCategory: layout.paperType,
+                                        gram: paper.gram,
+                                        tonPrice: paper.price,
+                                        priceUnit: paper.unit || '元/吨',
+                                        loss: currentConfig.grayBoardLoss || 0,
+                                        showGramList: false
+                                    });
+                                } else {
+                                    grayBoards.value[existingIndex] = {
+                                        ...grayBoards.value[existingIndex],
+                                        id: materialId,
+                                        length: length,
+                                        width: width,
+                                        mod: 1,
+                                        items: 1,
+                                        paperType: currentPaperType,
+                                        paperCategory: layout.paperType,
+                                        gram: paper.gram,
+                                        tonPrice: paper.price,
+                                        priceUnit: paper.unit || '元/吨',
+                                        loss: currentConfig.grayBoardLoss || 0
+                                    };
+                                }
+                                filledCount++;
+                            } else if (layout.materialType === 'C') {
+                                const existingIndex = pitPapers.value.findIndex(p => p && p.id && p.id.toString().startsWith('C'));
+                                if (existingIndex === -1) {
+                                    pitPapers.value.push({
+                                        id: materialId,
+                                        length: length,
+                                        width: width,
+                                        mod: 1,
+                                        items: 1,
+                                        paperType: currentPaperType,
+                                        paperCategory: layout.paperType,
+                                        gram: paper.gram,
+                                        tonPrice: paper.price,
+                                        priceUnit: paper.unit || '元/吨',
+                                        loss: currentConfig.pitPaperLoss || 0,
+                                        showGramList: false
+                                    });
+                                } else {
+                                    pitPapers.value[existingIndex] = {
+                                        ...pitPapers.value[existingIndex],
+                                        id: materialId,
+                                        length: length,
+                                        width: width,
+                                        mod: 1,
+                                        items: 1,
+                                        paperType: currentPaperType,
+                                        paperCategory: layout.paperType,
+                                        gram: paper.gram,
+                                        tonPrice: paper.price,
+                                        priceUnit: paper.unit || '元/吨',
+                                        loss: currentConfig.pitPaperLoss || 0
+                                    };
+                                }
+                                filledCount++;
+                            }
+                        });
+
+                        if (filledCount > 0) {
+                            goToPage('quote');
+                        }
+                    } catch (e) {
+                        console.error('fillAllLayoutsToQuote error:', e);
+                    }
+                };
+
+                const fillPaperToQuote = () => {
+                    if (!newLayout.value.materialType || !newLayout.value.paperType || !newLayout.value.gram) {
+                        // alert('请先选择完整的材质信息');
+                        return;
+                    }
+
+                    const paper = paperPrices.value.find(p => 
+                        p.materialType === newLayout.value.materialType && 
+                        p.type === newLayout.value.paperType && 
+                        p.gram === parseInt(newLayout.value.gram)
+                    );
+
+                    if (!paper) {
+                        // alert('未找到对应的纸张价格');
+                        return;
+                    }
+
+                    if (newLayout.value.materialType === 'A') {
+                        if (facePapers.value.length === 0) {
+                            facePapers.value.push({
+                                id: Date.now(),
+                                type: paper.type,
+                                gram: paper.gram,
+                                price: paper.price,
+                                unit: paper.unit,
+                                quantity: 1
+                            });
+                        } else {
+                            facePapers.value[0] = {
+                                ...facePapers.value[0],
+                                type: paper.type,
+                                gram: paper.gram,
+                                price: paper.price,
+                                unit: paper.unit
+                            };
+                        }
+                    } else if (newLayout.value.materialType === 'B') {
+                        if (grayBoards.value.length === 0) {
+                            grayBoards.value.push({
+                                id: Date.now(),
+                                type: paper.type,
+                                gram: paper.gram,
+                                price: paper.price,
+                                unit: paper.unit,
+                                quantity: 1
+                            });
+                        } else {
+                            grayBoards.value[0] = {
+                                ...grayBoards.value[0],
+                                type: paper.type,
+                                gram: paper.gram,
+                                price: paper.price,
+                                unit: paper.unit
+                            };
+                        }
+                    } else if (newLayout.value.materialType === 'C') {
+                        if (pitPapers.value.length === 0) {
+                            pitPapers.value.push({
+                                id: Date.now(),
+                                type: paper.type,
+                                gram: paper.gram,
+                                price: paper.price,
+                                unit: paper.unit,
+                                quantity: 1
+                            });
+                        } else {
+                            pitPapers.value[0] = {
+                                ...pitPapers.value[0],
+                                type: paper.type,
+                                gram: paper.gram,
+                                price: paper.price,
+                                unit: paper.unit
+                            };
+                        }
+                    }
+
+                    goToPage('quote');
+                    showAddLayoutModal.value = false;
+                    // alert('材质信息已填入报价单！');
+                };
+
+                const addDieCutterLayout = () => {
+                    showAddLayoutModal.value = true;
                 };
 
                 const removeDieCutterLayout = (index) => {
+                    const removedLayout = dieCutter.value.layouts[index];
+                    
                     dieCutter.value.layouts.splice(index, 1);
+
+                    if (removedLayout && removedLayout.partKeys) {
+                        const stillUsed = new Set();
+                        dieCutter.value.layouts.forEach(layout => {
+                            if (layout.partKeys) {
+                                layout.partKeys.forEach(key => stillUsed.add(key));
+                            }
+                        });
+                        
+                        removedLayout.partKeys.forEach(key => {
+                            if (!stillUsed.has(key)) {
+                                const idx = dieCutter.value.usedParts.indexOf(key);
+                                if (idx > -1) {
+                                    dieCutter.value.usedParts.splice(idx, 1);
+                                }
+                            }
+                        });
+                    }
                 };
 
                 const handleDieCutterZoom = (e) => {
@@ -5203,6 +5657,8 @@ ${matDetails}
                     getPaperKai, formatKDetail, calcK, formatRMB, formatUSD, formatInt, formatWeight, formatVol3, formatVol1, autoSelectPaperType, packingUnits, totalBoxes, boxSize, boxVolM3, singleProductWeight, singleBoxWeight, totalActualWeight, totalVolWeightSea, totalVolWeightExpress, totalCBM, cartonGirth, singleVolWeightSea, singleVolWeightExpress, isOverWeight,
                     currentPage, viewingRecord, formatDateTime, getRecordCost, getRecordFactoryPrice, viewRecord, editRecord, collapseProcesses, goToPage,
                     selectedBoxType, dieCutter, dieCutterZoom, boxTypes, paperSizes, currentBoxType, dieCutterParts, selectBox, getPartTypeName, getPartFillColor, getPartStrokeColor, toggleDieCutterPart, updateDieCutterLayout, autoSelectPaper, optimizeLayout, clearDieCutterLayout, addDieCutterLayout, removeDieCutterLayout, handleDieCutterZoom,
+                    showAddLayoutModal, newLayout, filteredPapers, availableGrams, selectedPaperPrice, confirmAddLayout, fillPaperToQuote, 
+                    getMaterialIcon, getMaterialName, fillAllLayoutsToQuote, generateMaterialId, defaultPaperPrices, defaultPaperSizes,
                     totalACost, totalBCost, totalCCost, totalPrintingCost, totalPaperCost, totalOtherProcessCost, totalCartonCost, totalProcessCost, totalAccCost, manualCost, totalCostNoShip, totalCostAll, factoryPrice, unitPrice,
                     usdTotalPrice, usdUnitPrice, records, currentRecordId, saveRecord, loadRecord, deleteRecord, resetForm,
                     templates, saveTemplate, loadTemplate, deleteTemplate,
